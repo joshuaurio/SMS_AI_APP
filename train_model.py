@@ -1,27 +1,32 @@
 import tensorflow as tf
-from tensorflow import keras
 from tensorflow.keras import layers
 import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load data
 data = pd.read_csv("sms_data.csv", encoding="latin-1")
-texts = data["text"].values
+texts = data["text"].astype(str).values
 labels = data["label"].values
 print(data["label"].value_counts())
 print(data["label"].unique())
 
+SEQ_LEN = 40
+VOCAB_SIZE = 3000
+
 # Text processing
 vectorizer = layers.TextVectorization(
-    max_tokens=3000,
-    output_sequence_length=40
+    max_tokens=VOCAB_SIZE,
+    output_sequence_length=SEQ_LEN
 )
 vectorizer.adapt(texts)
 
-# Build model
+# Convert texts to integers FIRST (same as train_model_int.py)
+x = vectorizer(texts)
+
+# Build model (integer input, no vectorizer inside)
 model = tf.keras.Sequential([
-    vectorizer,
-    layers.Embedding(3000, 16),
+    layers.Input(shape=(SEQ_LEN,), dtype=tf.int32),
+    layers.Embedding(VOCAB_SIZE, 16),
     layers.GlobalAveragePooling1D(),
     layers.Dense(16, activation="relu"),
     layers.Dense(1, activation="sigmoid")
@@ -34,7 +39,7 @@ model.compile(
 )
 
 # Train model
-history = model.fit(texts, labels, epochs=300, validation_split=0.2)
+history = model.fit(x, labels, epochs=300, validation_split=0.2)
 
 # Plot training history
 plt.plot(history.history['accuracy'], label='Training Accuracy')
